@@ -48,7 +48,7 @@ graph TD
 
 * `npm run build`: TypeScriptをJavaScriptにコンパイルします。
 * `npm run watch`: ファイルの変更を監視して自動的にコンパイルします。
-* `npm run test`: `jest` を使用して単体テストを実行します。
+* `npm run test`: `jest` を使用して単体テストを実行します。テストの詳細については [`docs/testing_strategy.md`](docs/testing_strategy.md) を参照してください。
 * `npx cdk deploy`: このスタックをデフォルトのAWSアカウント/リージョンにデプロイします。
 * `npx cdk diff`: デプロイ済みのスタックと現在の状態を比較します。
 * `npx cdk synth`: 合成されたCloudFormationテンプレートを出力します。

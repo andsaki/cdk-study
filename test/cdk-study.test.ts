@@ -12,14 +12,20 @@ test('TODO App Resources Created', () => {
   // DynamoDBテーブルが1つ存在すること
   template.resourceCountIs('AWS::DynamoDB::Table', 1);
 
-  // Lambda関数が2つ存在すること (Create, Get)
-  template.resourceCountIs('AWS::Lambda::Function', 2);
+  // Lambda関数が4つ存在すること (Create, Get, Update, Delete)
+  template.resourceCountIs('AWS::Lambda::Function', 4);
 
-  // API GatewayにPOSTとGETメソッドが存在すること
+  // API GatewayにPOST, GET, PUT, DELETEメソッドが存在すること
   template.hasResourceProperties('AWS::ApiGateway::Method', {
     HttpMethod: 'POST'
   });
   template.hasResourceProperties('AWS::ApiGateway::Method', {
     HttpMethod: 'GET'
+  });
+  template.hasResourceProperties('AWS::ApiGateway::Method', {
+    HttpMethod: 'PUT'
+  });
+  template.hasResourceProperties('AWS::ApiGateway::Method', {
+    HttpMethod: 'DELETE'
   });
 });

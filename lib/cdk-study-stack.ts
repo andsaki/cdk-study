@@ -15,7 +15,7 @@ export class CdkStudyStack extends cdk.Stack {
       removalPolicy: cdk.RemovalPolicy.DESTROY,
     });
 
-    // TODOを作成するLambda関数
+    // Create
     const createTodoFunction = new NodejsFunction(this, 'CreateTodoFunction', {
       runtime: lambda.Runtime.NODEJS_20_X,
       entry: path.join(__dirname, '../lambda/create.ts'),
@@ -26,7 +26,7 @@ export class CdkStudyStack extends cdk.Stack {
     });
     table.grantWriteData(createTodoFunction);
 
-    // TODOを一覧取得するLambda関数
+    // Get List
     const getTodosFunction = new NodejsFunction(this, 'GetTodosFunction', {
       runtime: lambda.Runtime.NODEJS_20_X,
       entry: path.join(__dirname, '../lambda/get.ts'),
@@ -37,15 +37,40 @@ export class CdkStudyStack extends cdk.Stack {
     });
     table.grantReadData(getTodosFunction);
 
-    // API Gateway の定義
+    // Update
+    const updateTodoFunction = new NodejsFunction(this, 'UpdateTodoFunction', {
+      runtime: lambda.Runtime.NODEJS_20_X,
+      entry: path.join(__dirname, '../lambda/update.ts'),
+      handler: 'handler',
+      environment: {
+        TABLE_NAME: table.tableName,
+      },
+    });
+    table.grantWriteData(updateTodoFunction);
+
+    // Delete
+    const deleteTodoFunction = new NodejsFunction(this, 'DeleteTodoFunction', {
+        runtime: lambda.Runtime.NODEJS_20_X,
+        entry: path.join(__dirname, '../lambda/delete.ts'),
+        handler: 'handler',
+        environment: {
+            TABLE_NAME: table.tableName,
+        },
+    });
+    table.grantWriteData(deleteTodoFunction);
+
+    // API Gateway
     const api = new apigateway.LambdaRestApi(this, 'TodoApi', {
-      handler: createTodoFunction, // デフォルトハンドラ(使われない)
+      handler: createTodoFunction, // Default handler
       proxy: false,
     });
 
     const todos = api.root.addResource('todos');
     todos.addMethod('POST', new apigateway.LambdaIntegration(createTodoFunction));
-    // GET /todos を追加
     todos.addMethod('GET', new apigateway.LambdaIntegration(getTodosFunction));
+
+    const todoById = todos.addResource('{id}'); // /todos/{id}
+    todoById.addMethod('PUT', new apigateway.LambdaIntegration(updateTodoFunction));
+    todoById.addMethod('DELETE', new apigateway.LambdaIntegration(deleteTodoFunction));
   }
 }
