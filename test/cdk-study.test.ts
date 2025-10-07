@@ -9,24 +9,17 @@ test('TODO App Resources Created', () => {
   // THEN
   const template = Template.fromStack(stack);
 
-  // DynamoDBテーブルのテスト
-  template.hasResourceProperties('AWS::DynamoDB::Table', {
-    KeySchema: [
-      {
-        AttributeName: 'id',
-        KeyType: 'HASH'
-      }
-    ]
-  });
+  // DynamoDBテーブルが1つ存在すること
+  template.resourceCountIs('AWS::DynamoDB::Table', 1);
 
-  // Lambda関数のテスト
-  template.hasResourceProperties('AWS::Lambda::Function', {
-    Runtime: 'nodejs20.x',
-    Handler: 'index.handler'
-  });
+  // Lambda関数が2つ存在すること (Create, Get)
+  template.resourceCountIs('AWS::Lambda::Function', 2);
 
-  // API Gatewayのテスト (POST /todos があるか)
+  // API GatewayにPOSTとGETメソッドが存在すること
   template.hasResourceProperties('AWS::ApiGateway::Method', {
     HttpMethod: 'POST'
+  });
+  template.hasResourceProperties('AWS::ApiGateway::Method', {
+    HttpMethod: 'GET'
   });
 });

@@ -4,7 +4,6 @@ import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import { NodejsFunction } from 'aws-cdk-lib/aws-lambda-nodejs';
 import * as path from 'path';
-// API Gatewayのモジュールをインポートします
 import * as apigateway from 'aws-cdk-lib/aws-apigateway';
 
 export class CdkStudyStack extends cdk.Stack {
@@ -16,6 +15,7 @@ export class CdkStudyStack extends cdk.Stack {
       removalPolicy: cdk.RemovalPolicy.DESTROY,
     });
 
+    // TODOを作成するLambda関数
     const createTodoFunction = new NodejsFunction(this, 'CreateTodoFunction', {
       runtime: lambda.Runtime.NODEJS_20_X,
       entry: path.join(__dirname, '../lambda/create.ts'),
@@ -24,18 +24,28 @@ export class CdkStudyStack extends cdk.Stack {
         TABLE_NAME: table.tableName,
       },
     });
-
     table.grantWriteData(createTodoFunction);
 
-    // API Gateway を定義し、Lambda関数と統合します
+    // TODOを一覧取得するLambda関数
+    const getTodosFunction = new NodejsFunction(this, 'GetTodosFunction', {
+      runtime: lambda.Runtime.NODEJS_20_X,
+      entry: path.join(__dirname, '../lambda/get.ts'),
+      handler: 'handler',
+      environment: {
+        TABLE_NAME: table.tableName,
+      },
+    });
+    table.grantReadData(getTodosFunction);
+
+    // API Gateway の定義
     const api = new apigateway.LambdaRestApi(this, 'TodoApi', {
-      handler: createTodoFunction, // デフォルトの統合先としてcreateTodoFunctionを指定
-      proxy: false, // /todos のような特定パスへのルーティングを手動で設定するためfalseに
+      handler: createTodoFunction, // デフォルトハンドラ(使われない)
+      proxy: false,
     });
 
-    // '/todos' というリソースパスを作成します
     const todos = api.root.addResource('todos');
-    // '/todos' パスへのPOSTリクエストをLambda関数に統合します
     todos.addMethod('POST', new apigateway.LambdaIntegration(createTodoFunction));
+    // GET /todos を追加
+    todos.addMethod('GET', new apigateway.LambdaIntegration(getTodosFunction));
   }
 }
