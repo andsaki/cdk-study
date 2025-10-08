@@ -9,7 +9,7 @@
 
 このアプリケーションは、以下のAWSサービスを使用しています。
 
-- **Amazon API Gateway:** TODOアイテムを作成・一覧取得するためのREST APIエンドポイント (`POST /todos`, `GET /todos`) を提供します。
+- **Amazon API Gateway:** TODOアイテムを操作するためのREST APIエンドポイント (`POST /todos`, `GET /todos`, `GET /todos/{id}` など) を提供します。
 - **AWS Lambda:** API Gatewayからのリクエストを処理し、DynamoDBとやり取りするビジネスロジックを実行します。
 - **Amazon DynamoDB:** TODOアイテムを永続化するためのNoSQLデータベースです。
 - **Amazon CloudWatch:** Lambda関数のエラーを監視し、エラー率が高い場合にアラームを発生させます。
@@ -59,11 +59,18 @@ sequenceDiagram
 3.  Lambda関数がDynamoDBテーブルの全アイテムをスキャン（取得）します。
 4.  成功すると、Lambda関数はTODOアイテムのリストを `200 OK` レスポンスで返します。
 
+#### TODO詳細取得 (GET /todos/{id})
+1.  クライアントが `GET /todos/{id}` にリクエストを送信します。
+2.  API Gatewayがリクエストを受け取り、`GetTodoById` Lambda関数をトリガーします。
+3.  Lambda関数が指定されたIDのアイテムを1件取得します。
+4.  アイテムが見つかれば `200 OK` で、見つからなければ `404 Not Found` で応答します。
+
 ## プロジェクト構成
 
 - `lib/cdk-study-stack.ts`: すべてのインフラストラクチャを定義するCDKスタックです。
 - `lambda/create.ts`: TODOアイテムを作成するLambda関数のソースコードです。
 - `lambda/get.ts`: TODOアイテムを一覧取得するLambda関数のソースコードです。
+- `lambda/get-one.ts`: TODOアイテムを1件取得するLambda関数のソースコードです。
 - `test/cdk-study.test.ts`: インフラ定義を検証するテストコードです。
 
 ## 便利なコマンド

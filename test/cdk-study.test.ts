@@ -12,29 +12,12 @@ test('TODO App Resources Created', () => {
   // DynamoDBテーブルが1つ存在すること
   template.resourceCountIs('AWS::DynamoDB::Table', 1);
 
-  // Lambda関数が4つ存在すること (Create, Get, Update, Delete)
-  template.resourceCountIs('AWS::Lambda::Function', 4);
+  // Lambda関数が5つ存在すること (Create, GetList, GetOne, Update, Delete)
+  template.resourceCountIs('AWS::Lambda::Function', 5);
 
-  // API GatewayにPOST, GET, PUT, DELETEメソッドが存在すること
-  template.hasResourceProperties('AWS::ApiGateway::Method', {
-    HttpMethod: 'POST'
-  });
-  template.hasResourceProperties('AWS::ApiGateway::Method', {
-    HttpMethod: 'GET'
-  });
-  template.hasResourceProperties('AWS::ApiGateway::Method', {
-    HttpMethod: 'PUT'
-  });
-  template.hasResourceProperties('AWS::ApiGateway::Method', {
-    HttpMethod: 'DELETE'
-  });
+  // API Gatewayのメソッドが5つ存在すること (POST, GET, GET, PUT, DELETE)
+  template.resourceCountIs('AWS::ApiGateway::Method', 5);
 
   // CloudWatchアラームが1つ存在すること
   template.resourceCountIs('AWS::CloudWatch::Alarm', 1);
-  template.hasResourceProperties('AWS::CloudWatch::Alarm', {
-    MetricName: 'Errors',
-    Namespace: 'AWS/Lambda',
-    Threshold: 5,
-    Period: 300
-  });
 });

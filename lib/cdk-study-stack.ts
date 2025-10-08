@@ -38,6 +38,17 @@ export class CdkStudyStack extends cdk.Stack {
     });
     table.grantReadData(getTodosFunction);
 
+    // Get One
+    const getTodoByIdFunction = new NodejsFunction(this, 'GetTodoByIdFunction', {
+        runtime: lambda.Runtime.NODEJS_20_X,
+        entry: path.join(__dirname, '../lambda/get-one.ts'),
+        handler: 'handler',
+        environment: {
+            TABLE_NAME: table.tableName,
+        },
+    });
+    table.grantReadData(getTodoByIdFunction);
+
     // Update
     const updateTodoFunction = new NodejsFunction(this, 'UpdateTodoFunction', {
       runtime: lambda.Runtime.NODEJS_20_X,
@@ -71,6 +82,7 @@ export class CdkStudyStack extends cdk.Stack {
     todos.addMethod('GET', new apigateway.LambdaIntegration(getTodosFunction));
 
     const todoById = todos.addResource('{id}'); // /todos/{id}
+    todoById.addMethod('GET', new apigateway.LambdaIntegration(getTodoByIdFunction));
     todoById.addMethod('PUT', new apigateway.LambdaIntegration(updateTodoFunction));
     todoById.addMethod('DELETE', new apigateway.LambdaIntegration(deleteTodoFunction));
 
