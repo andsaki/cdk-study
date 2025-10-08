@@ -19,24 +19,28 @@ sequenceDiagram
     participant User as ユーザー
     participant Frontend as フロントエンド(HTML)
     participant API Gateway
-    participant GetTodos Lambda
+    participant Lambda
     participant DynamoDB
+    participant CloudWatch
 
-    User->>Frontend: ページを読み込む
+    User->>Frontend: 操作を行う
     activate Frontend
-    Frontend->>API Gateway: GET /todos
+    Frontend->>API Gateway: APIリクエスト (GET, POSTなど)
     activate API Gateway
-    API Gateway->>GetTodos Lambda: イベントをトリガー
-    activate GetTodos Lambda
-    GetTodos Lambda->>DynamoDB: Scan(TableName)
+    API Gateway->>Lambda: イベントをトリガー
+    activate Lambda
+
+    note over Lambda, CloudWatch: 実行ログやメトリクスは<br/>自動的にCloudWatchに送信される
+
+    Lambda->>DynamoDB: データ操作 (Scan, Putなど)
     activate DynamoDB
-    DynamoDB-->>GetTodos Lambda: TODOアイテムのリスト
+    DynamoDB-->>Lambda: 操作結果
     deactivate DynamoDB
-    GetTodos Lambda-->>API Gateway: 200 OK (アイテムリスト)
-    deactivate GetTodos Lambda
-    API Gateway-->>Frontend: 200 OK (アイテムリスト)
+    Lambda-->>API Gateway: APIレスポンス
+    deactivate Lambda
+    API Gateway-->>Frontend: APIレスポンス
     deactivate API Gateway
-    Frontend->>User: TODOリストを表示
+    Frontend->>User: 画面を更新
     deactivate Frontend
 ```
 
