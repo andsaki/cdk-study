@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CDK TODO App</title>
+    <style>
+        body { font-family: sans-serif; container-type: inline-size; }
+        ul { list-style-type: none; padding: 0; }
+        li { background: #f4f4f4; margin: 5px 0; padding: 10px; display: flex; justify-content: space-between; align-items: center; }
+        .completed { text-decoration: line-through; color: #888; }
+        button { cursor: pointer; }
+    </style>
+</head>
+<body>
+
+    <h1>TODOリスト</h1>
+
+    <div>
+        <input type="text" id="todo-input" placeholder="新しいTODOを追加">
+        <button id="add-todo-btn">追加</button>
+    </div>
+
+    <ul id="todo-list">
+        <!-- TODOアイテムはここに表示されます -->
+    </ul>
+
+    <script>
+        // --- 設定 ---
+        // デプロイ後に、API GatewayのURLに置き換えてください
+        const API_ENDPOINT = 'https://YOUR_API_GATEWAY_URL_HERE/todos';
+
+        // --- DOM要素 ---
+        const todoList = document.getElementById('todo-list');
+        const todoInput = document.getElementById('todo-input');
+        const addTodoBtn = document.getElementById('add-todo-btn');
+
+        // --- 関数 ---
+
+        // TODOリストを再描画する
+        const renderTodos = (todos) => {
+            todoList.innerHTML = ''; // いったんリストを空にする
+            todos.forEach(todo => {
+                const li = document.createElement('li');
+                li.textContent = todo.todo;
+                if (todo.completed) {
+                    li.classList.add('completed');
+                }
+                // TODO: 更新・削除ボタンもここに追加できる
+                todoList.appendChild(li);
+            });
+        };
+
+        // TODO一覧を取得する
+        const getTodos = async () => {
+            try {
+                // デプロイ前のダミーデータ
+                if (API_ENDPOINT.includes('YOUR_API_GATEWAY_URL_HERE')) {
+                    console.log('API_ENDPOINTが設定されていないため、ダミーデータを表示します。');
+                    const dummyData = [
+                        { id: '1', todo: 'CDKの学習', completed: true },
+                        { id: '2', todo: 'フロントエンドの作成', completed: false },
+                    ];
+                    renderTodos(dummyData);
+                    return;
+                }
+                const response = await fetch(API_ENDPOINT);
+                const todos = await response.json();
+                renderTodos(todos);
+            } catch (error) {
+                console.error('Error getting todos:', error);
+            }
+        };
+
+        // 新しいTODOを追加する
+        const addTodo = async () => {
+            const todoText = todoInput.value;
+            if (!todoText) return;
+
+            try {
+                // デプロイ前のダミー処理
+                if (API_ENDPOINT.includes('YOUR_API_GATEWAY_URL_HERE')) {
+                    console.log('API_ENDPOINTが設定されていないため、ローカルでのみ追加します。');
+                    const newTodo = { id: Date.now().toString(), todo: todoText, completed: false };
+                    const currentTodos = Array.from(todoList.children).map((li, i) => ({
+                        id: i.toString(),
+                        todo: li.textContent,
+                        completed: li.classList.contains('completed')
+                    }));
+                    renderTodos([...currentTodos, newTodo]);
+                    todoInput.value = '';
+                    return;
+                }
+
+                const response = await fetch(API_ENDPOINT, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ todo: todoText }),
+                });
+                if (response.ok) {
+                    getTodos(); // 追加後にリストを再取得
+                    todoInput.value = '';
+                }
+            } catch (error) {
+                console.error('Error adding todo:', error);
+            }
+        };
+
+        // --- イベントリスナー ---
+        addTodoBtn.addEventListener('click', addTodo);
+
+        // --- 初期表示 ---
+        getTodos(); // ページ読み込み時にTODO一覧を取得
+
+    </script>
+</body>
+</html>

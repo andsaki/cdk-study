@@ -14,12 +14,29 @@
 - **Amazon DynamoDB:** TODOアイテムを永続化するためのNoSQLデータベースです。
 
 ```mermaid
-graph TD
-    A[Client] --> B{API Gateway};
-    B -- POST /todos --> C[CreateTodo Lambda];
-    B -- GET /todos --> E[GetTodos Lambda];
-    C --> D[DynamoDB Table];
-    E --> D;
+sequenceDiagram
+    participant User as ユーザー
+    participant Frontend as フロントエンド(HTML)
+    participant API Gateway
+    participant GetTodos Lambda
+    participant DynamoDB
+
+    User->>Frontend: ページを読み込む
+    activate Frontend
+    Frontend->>API Gateway: GET /todos
+    activate API Gateway
+    API Gateway->>GetTodos Lambda: イベントをトリガー
+    activate GetTodos Lambda
+    GetTodos Lambda->>DynamoDB: Scan(TableName)
+    activate DynamoDB
+    DynamoDB-->>GetTodos Lambda: TODOアイテムのリスト
+    deactivate DynamoDB
+    GetTodos Lambda-->>API Gateway: 200 OK (アイテムリスト)
+    deactivate GetTodos Lambda
+    API Gateway-->>Frontend: 200 OK (アイテムリスト)
+    deactivate API Gateway
+    Frontend->>User: TODOリストを表示
+    deactivate Frontend
 ```
 
 ### リクエストフロー
