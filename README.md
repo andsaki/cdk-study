@@ -11,7 +11,7 @@
 
 - **Amazon API Gateway:** TODOアイテムを操作するためのREST APIエンドポイント (`POST /todos`, `GET /todos`, `GET /todos/{id}` など) を提供します。
 - **AWS Lambda:** API Gatewayからのリクエストを処理し、DynamoDBとやり取りするビジネスロジックを実行します。
-- **Amazon DynamoDB:** TODOアイテムを永続化するためのNoSQLデータベースです。
+- **Amazon DynamoDB:** TODOアイテムを永続化するためのNoSQLデータベースです。(詳しい解説は [`docs/database_choice.md`](docs/database_choice.md) を参照)
 - **Amazon CloudWatch:** Lambda関数のエラーを監視し、エラー率が高い場合にアラームを発生させます。
 
 ```mermaid
