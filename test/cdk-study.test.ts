@@ -28,4 +28,13 @@ test('TODO App Resources Created', () => {
   template.hasResourceProperties('AWS::ApiGateway::Method', {
     HttpMethod: 'DELETE'
   });
+
+  // CloudWatchアラームが1つ存在すること
+  template.resourceCountIs('AWS::CloudWatch::Alarm', 1);
+  template.hasResourceProperties('AWS::CloudWatch::Alarm', {
+    MetricName: 'Errors',
+    Namespace: 'AWS/Lambda',
+    Threshold: 5,
+    Period: 300
+  });
 });

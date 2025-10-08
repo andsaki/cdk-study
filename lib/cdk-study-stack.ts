@@ -5,6 +5,7 @@ import * as lambda from 'aws-cdk-lib/aws-lambda';
 import { NodejsFunction } from 'aws-cdk-lib/aws-lambda-nodejs';
 import * as path from 'path';
 import * as apigateway from 'aws-cdk-lib/aws-apigateway';
+import * as cloudwatch from 'aws-cdk-lib/aws-cloudwatch';
 
 export class CdkStudyStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
@@ -72,5 +73,15 @@ export class CdkStudyStack extends cdk.Stack {
     const todoById = todos.addResource('{id}'); // /todos/{id}
     todoById.addMethod('PUT', new apigateway.LambdaIntegration(updateTodoFunction));
     todoById.addMethod('DELETE', new apigateway.LambdaIntegration(deleteTodoFunction));
+
+    // CloudWatch Alarm
+    new cloudwatch.Alarm(this, 'CreateTodoErrorAlarm', {
+        metric: createTodoFunction.metricErrors({ period: cdk.Duration.minutes(5) }),
+        threshold: 5,
+        evaluationPeriods: 1,
+        alarmName: 'CreateTodoFunction-High-Error-Rate',
+        alarmDescription: 'createTodoFunctionのエラー率が高い場合にトリガーされます。',
+        treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING,
+    });
   }
 }
