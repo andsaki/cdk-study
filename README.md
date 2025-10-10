@@ -28,13 +28,13 @@ sequenceDiagram
     participant CloudFront
     participant S3バケット
 
-    ユーザー/ブラウザ->>+CloudFront: 1. Webサイトをリクエスト
+    ユーザー/ブラウザ->>CloudFront: 1. Webサイトをリクエスト
     alt CloudFrontにキャッシュがある場合
-        CloudFront-->>-ユーザー/ブラウザ: 2. キャッシュから高速に応答
+        CloudFront-->>ユーザー/ブラウザ: 2. キャッシュから高速に応答
     else キャッシュがない場合
-        CloudFront->>+S3バケット: 2a. OAIを使ってコンテンツを要求
+        CloudFront->>S3バケット: 2a. OAIを使ってコンテンツを要求
         S3バケット-->>CloudFront: 2b. index.htmlなどを返す
-        CloudFront-->>-ユーザー/ブラウザ: 2c. コンテンツを返しつつキャッシュする
+        CloudFront-->>ユーザー/ブラウザ: 2c. コンテンツを返しつつキャッシュする
     end
 ```
 
