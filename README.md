@@ -49,12 +49,12 @@ sequenceDiagram
     participant Lambda (作成用)
     participant DynamoDB
 
-    ユーザー/ブラウザ->>+API Gateway: 1. TODO作成リクエスト (POST /todos)
-    API Gateway->>+Lambda (作成用): 2. リクエストをLambdaに転送
-    Lambda (作成用)->>+DynamoDB: 3. 新しいTODOデータを書き込み
-    DynamoDB-->>-Lambda (作成用): 4. 書き込み成功を応答
-    Lambda (作成用)-->>-API Gateway: 5. 処理成功を応答
-    API Gateway-->>-ユーザー/ブラウザ: 6. 成功ステータス (200 OK) を返す
+    ユーザー/ブラウザ->>API Gateway: 1. TODO作成リクエスト (POST /todos)
+    API Gateway->>Lambda (作成用): 2. リクエストをLambdaに転送
+    Lambda (作成用)->>DynamoDB: 3. 新しいTODOデータを書き込み
+    DynamoDB-->>Lambda (作成用): 4. 書き込み成功を応答
+    Lambda (作成用)-->>API Gateway: 5. 処理成功を応答
+    API Gateway-->>ユーザー/ブラウザ: 6. 成功ステータス (200 OK) を返す
 ```
 
 ## プロジェクト構成
@@ -93,3 +93,7 @@ Outputs:
 CdkStudyStack.CloudFrontURL = https://xxxxxxxxxxxxxx.cloudfront.net
 CdkStudyStack.TodoApiEndpointC1E16B6C = https://xxxxxxxxxx.execute-api.ap-northeast-1.amazonaws.com/prod/
 ```
+
+## 本番環境へのデプロイ
+
+このアプリケーションを本番環境で運用する際の、カスタムドメイン設定に関する考慮事項については、[`docs/production_deployment.md`](docs/production_deployment.md) を参照してください。
