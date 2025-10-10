@@ -158,15 +158,15 @@ export class CdkStudyStack extends cdk.Stack {
         origin: new origins.S3Origin(webSiteBucket, { originAccessIdentity }),
         viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
       },
-      comment: 'S3-backed website with CloudFront',
+      comment: 'S3-backed React app with CloudFront',
     });
 
     /**
-     * ローカルの'../frontend'ディレクトリのコンテンツをS3バケットにデプロイします。
+     * ビルド済みのReactアプリの成果物（`../frontend/dist`）をS3バケットにデプロイします。
      * デプロイ後、CloudFrontのキャッシュを自動で無効化し、最新のコンテンツが配信されるようにします。
      */
     new s3deploy.BucketDeployment(this, 'DeployWebsite', {
-      sources: [s3deploy.Source.asset(path.join(__dirname, '../frontend'))],
+      sources: [s3deploy.Source.asset(path.join(__dirname, '../frontend/dist'))],
       destinationBucket: webSiteBucket,
       distribution: distribution,
       distributionPaths: ['/*'], // Invalidate all files in the distribution upon deployment
