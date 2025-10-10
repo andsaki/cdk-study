@@ -33,7 +33,7 @@ sequenceDiagram
         CloudFront-->>-ユーザー/ブラウザ: 2. キャッシュから高速に応答
     else キャッシュがない場合
         CloudFront->>+S3バケット: 2a. OAIを使ってコンテンツを要求
-        S3バケット-->>-CloudFront: 2b. index.htmlなどを返す
+        S3バケット-->>CloudFront: 2b. index.htmlなどを返す
         CloudFront-->>-ユーザー/ブラウザ: 2c. コンテンツを返しつつキャッシュする
     end
 ```
@@ -79,3 +79,17 @@ sequenceDiagram
 > 初めてCDKをデプロイするAWSアカウントとリージョンの組み合わせでは、事前に一度だけ `npx cdk bootstrap` を実行する必要があります。これはCDKがデプロイ作業に使うS3バケットなどを作成する準備コマンドです。
 > 
 > ちなみに、これはWebデザインで使われる「CSSのBootstrap」とは全く関係ありません。
+
+## デプロイ後の確認
+
+`npx cdk deploy` が成功すると、`Outputs` として以下のような2つのURLが出力されます。
+
+*   `CdkStudyStack.CloudFrontURL`: フロントエンドのWebサイトにアクセスするためのURLです。ブラウザで開いて確認します。
+*   `CdkStudyStack.TodoApiEndpoint...`: バックエンドAPIのエンドポイントURLです。
+
+**出力例:**
+```
+Outputs:
+CdkStudyStack.CloudFrontURL = https://xxxxxxxxxxxxxx.cloudfront.net
+CdkStudyStack.TodoApiEndpointC1E16B6C = https://xxxxxxxxxx.execute-api.ap-northeast-1.amazonaws.com/prod/
+```
