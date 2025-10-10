@@ -73,3 +73,9 @@ sequenceDiagram
 * `npx cdk deploy`: このスタックをデフォルトのAWSアカウント/リージョンにデプロイします。
 * `npx cdk diff`: デプロイ済みのスタックと現在の状態を比較します。
 * `npx cdk synth`: 合成されたCloudFormationテンプレートを出力します。
+
+> **Note: 初回デプロイ前の準備 (Bootstrap)**
+> 
+> 初めてCDKをデプロイするAWSアカウントとリージョンの組み合わせでは、事前に一度だけ `npx cdk bootstrap` を実行する必要があります。これはCDKがデプロイ作業に使うS3バケットなどを作成する準備コマンドです。
+> 
+> ちなみに、これはWebデザインで使われる「CSSのBootstrap」とは全く関係ありません。
