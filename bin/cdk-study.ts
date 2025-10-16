@@ -1,8 +1,14 @@
 #!/usr/bin/env node
 import * as cdk from 'aws-cdk-lib';
 import { CdkStudyStack } from '../lib/cdk-study-stack';
+import { PipelineStack } from '../lib/pipeline-stack';
 
 const app = new cdk.App();
+
+// CI/CD Pipeline Stack
+new PipelineStack(app, 'PipelineStack', {});
+
+// Application Stack
 new CdkStudyStack(app, 'CdkStudyStack', {
   /* If you don't specify 'env', this stack will be environment-agnostic.
    * Account/Region-dependent features and context lookups will not work,

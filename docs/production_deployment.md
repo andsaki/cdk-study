@@ -35,6 +35,32 @@ sequenceDiagram
     CloudFront-->>ユーザー: 6. コンテンツを配信
 ```
 
+## CI/CDパイプライン
+
+AWS CodePipelineを利用して、コードの変更からデプロイまでを自動化します。
+
+```mermaid
+sequenceDiagram
+    participant Developer
+    participant GitHub
+    participant AWS CodePipeline
+    participant AWS CodeBuild
+    participant AWS CloudFormation
+    participant Amazon S3
+    participant Amazon CloudFront
+
+    Developer->>GitHub: 1. git push (mainブランチ)
+    GitHub->>AWS CodePipeline: 2. Webhookで変更を通知
+    AWS CodePipeline->>GitHub: 3. ソースコードを取得 (Sourceステージ)
+    AWS CodePipeline->>AWS CodeBuild: 4. ビルドを開始 (Buildステージ)
+    AWS CodeBuild->>AWS CodeBuild: 5. テスト、ビルド、CDK synthを実行
+    AWS CodeBuild-->>AWS CodePipeline: 6. ビルドアートファクト (cdk.out) を返却
+    AWS CodePipeline->>AWS CloudFormation: 7. スタックのデプロイを開始 (Deployステージ)
+    CloudFormation->>Amazon S3: 8. フロントエンド資材をデプロイ
+    CloudFormation->>Amazon CloudFront: 9. キャッシュを無効化
+
+```
+
 ## まとめ
 
 本番環境のドメインは、表向きには**カスタムドメイン**ですが、その裏側（実体）では**CloudFrontが動いている**、というのが正しい構成です。
