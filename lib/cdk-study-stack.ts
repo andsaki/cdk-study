@@ -11,6 +11,7 @@ import * as s3deploy from 'aws-cdk-lib/aws-s3-deployment';
 import * as cloudfront from 'aws-cdk-lib/aws-cloudfront';
 import * as origins from 'aws-cdk-lib/aws-cloudfront-origins';
 import * as logs from 'aws-cdk-lib/aws-logs';
+import * as iam from 'aws-cdk-lib/aws-iam';
 
 /**
  * モダンなフルスタックWebアプリケーションの構成をCDKで定義するスタックです。
@@ -172,15 +173,26 @@ export class CdkStudyStack extends cdk.Stack {
     });
 
     /**
+     * CloudFrontがS3バケットに安全にアクセスするための専用ID。
+     */
+    const originAccessIdentity = new cloudfront.OriginAccessIdentity(this, 'OriginAccessIdentity');
+
+    // OAIにS3バケットへの読み取り権限を付与
+    webSiteBucket.addToResourcePolicy(new iam.PolicyStatement({
+        actions: ['s3:GetObject'],
+        resources: [webSiteBucket.arnForObjects('*')],
+        principals: [originAccessIdentity.grantPrincipal],
+    }));
+
+    /**
      * S3バケットのコンテンツを配信するCloudFrontディストリビューション。
      * 世界中のエッジロケーションにコンテンツをキャッシュし、高速なアクセスを提供します。
      * HTTPアクセスは自動的にHTTPSにリダイレクトされます。
-     * Origin Access Control (OAC) によりS3へのアクセスを安全に制御します。
      */
     const distribution = new cloudfront.Distribution(this, 'Distribution', {
       defaultRootObject: 'index.html',
       defaultBehavior: {
-        origin: origins.S3BucketOrigin.withOriginAccessControl(webSiteBucket),
+        origin: new origins.S3Origin(webSiteBucket, { originAccessIdentity }),
         viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
       },
       comment: 'S3-backed React app with CloudFront',
