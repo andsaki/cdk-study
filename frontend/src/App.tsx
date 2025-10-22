@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 // このURLはご自身の環境のAPI Gatewayエンドポイントに置き換えてください。
 // cdk deploy完了時に出力される CdkStudyStack.TodoApiEndpoint... の値です。
@@ -52,6 +52,11 @@ function App() {
     }
   };
 
+  // 初回ロード時にTODOリストを取得
+  useEffect(() => {
+    fetchTodos();
+  }, []);
+
   return (
     <>
       <h1>CDK React App</h1>
@@ -63,15 +68,12 @@ function App() {
           onChange={(e) => setNewTodo(e.target.value)}
           placeholder="新しいTODOを入力"
           style={{ marginRight: '10px', padding: '5px' }}
+          onKeyDown={(e) => e.key === 'Enter' && createTodo()}
         />
         <button onClick={createTodo} disabled={loading || !newTodo.trim()}>
           追加
         </button>
       </div>
-
-      <button onClick={fetchTodos} disabled={loading}>
-        {loading ? '読み込み中...' : 'TODOリストを取得'}
-      </button>
 
       {error && <p style={{ color: 'red' }}>エラー: {error}</p>}
 
