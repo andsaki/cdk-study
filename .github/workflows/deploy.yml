@@ -1,11 +1,12 @@
 name: Deploy to AWS via GitHub Actions
 
 on:
-  # masterブランチへのプッシュ時にワークフローを実行
-  workflow_dispatch:  # 手動実行も可能
-  push:
-    branches:
-      - main
+  # 手動実行のみ（プッシュ時の自動実行を無効化してCI時間を節約）
+  workflow_dispatch:
+  # 自動デプロイが必要な場合は以下のコメントを外す
+  # push:
+  #   branches:
+  #     - main
 
 jobs:
   deploy:
@@ -15,11 +16,12 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # 2. Node.js環境をセットアップ
+      # 2. Node.js環境をセットアップ（キャッシュ有効化）
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
+          cache: 'npm'
 
       # 3. AWS認証情報を設定
       # 事前にGitHubリポジトリのSettings > Secrets and variables > Actionsで
@@ -33,11 +35,11 @@ jobs:
 
       # 4. プロジェクト全体の依存関係をインストール
       - name: Install root dependencies
-        run: npm install
+        run: npm ci
 
       # 5. フロントエンドの依存関係をインストール
       - name: Install frontend dependencies
-        run: npm install --prefix frontend
+        run: npm ci --prefix frontend
 
       # 6. フロントエンドをビルド
       - name: Build frontend
