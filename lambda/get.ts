@@ -22,12 +22,20 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
         const response = await docClient.send(command);
         return {
             statusCode: 200,
+            headers: {
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Headers': 'Content-Type',
+            },
             body: JSON.stringify(response.Items),
         };
     } catch (error) {
         console.error(error);
         return {
             statusCode: 500,
+            headers: {
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Headers': 'Content-Type',
+            },
             body: JSON.stringify({ message: 'Failed to get todo items.' }),
         };
     }

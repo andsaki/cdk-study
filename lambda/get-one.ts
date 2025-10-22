@@ -15,6 +15,10 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
     if (!id) {
         return {
             statusCode: 400,
+            headers: {
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Headers': 'Content-Type',
+            },
             body: JSON.stringify({ message: 'ID is missing from path' }),
         };
     }
@@ -31,12 +35,20 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
         if (response.Item) {
             return {
                 statusCode: 200,
+                headers: {
+                    'Access-Control-Allow-Origin': '*',
+                    'Access-Control-Allow-Headers': 'Content-Type',
+                },
                 body: JSON.stringify(response.Item),
             };
         } else {
             // アイテムが見つからなかった場合
             return {
                 statusCode: 404,
+                headers: {
+                    'Access-Control-Allow-Origin': '*',
+                    'Access-Control-Allow-Headers': 'Content-Type',
+                },
                 body: JSON.stringify({ message: 'Todo item not found' }),
             };
         }
@@ -44,6 +56,10 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
         console.error(error);
         return {
             statusCode: 500,
+            headers: {
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Headers': 'Content-Type',
+            },
             body: JSON.stringify({ message: 'Failed to get todo item.' }),
         };
     }

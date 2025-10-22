@@ -15,6 +15,10 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
     if (!id) {
         return {
             statusCode: 400,
+            headers: {
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Headers': 'Content-Type',
+            },
             body: JSON.stringify({ message: 'ID is missing from path' }),
         };
     }
@@ -22,6 +26,10 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
     if (!event.body) {
         return {
             statusCode: 400,
+            headers: {
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Headers': 'Content-Type',
+            },
             body: JSON.stringify({ message: 'Request body is missing' }),
         };
     }
@@ -45,12 +53,20 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
         const response = await docClient.send(command);
         return {
             statusCode: 200,
+            headers: {
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Headers': 'Content-Type',
+            },
             body: JSON.stringify(response.Attributes),
         };
     } catch (error) {
         console.error(error);
         return {
             statusCode: 500,
+            headers: {
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Headers': 'Content-Type',
+            },
             body: JSON.stringify({ message: 'Failed to update todo item.' }),
         };
     }

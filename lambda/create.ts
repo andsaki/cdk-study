@@ -20,6 +20,10 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
     if (!event.body) {
         return {
             statusCode: 400,
+            headers: {
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Headers': 'Content-Type',
+            },
             body: JSON.stringify({ message: 'Request body is missing' }),
         };
     }
@@ -43,12 +47,20 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
         await docClient.send(command);
         return {
             statusCode: 201, // 201 Created
+            headers: {
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Headers': 'Content-Type',
+            },
             body: JSON.stringify(newItem),
         };
     } catch (error) {
         console.error(error);
         return {
             statusCode: 500,
+            headers: {
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Headers': 'Content-Type',
+            },
             body: JSON.stringify({ message: 'Failed to create todo item.' }),
         };
     }

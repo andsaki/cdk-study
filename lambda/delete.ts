@@ -15,6 +15,10 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
     if (!id) {
         return {
             statusCode: 400,
+            headers: {
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Headers': 'Content-Type',
+            },
             body: JSON.stringify({ message: 'ID is missing from path' }),
         };
     }
@@ -28,12 +32,20 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
         await docClient.send(command);
         return {
             statusCode: 204, // 204 No Content
+            headers: {
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Headers': 'Content-Type',
+            },
             body: '',
         };
     } catch (error) {
         console.error(error);
         return {
             statusCode: 500,
+            headers: {
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Headers': 'Content-Type',
+            },
             body: JSON.stringify({ message: 'Failed to delete todo item.' }),
         };
     }
