@@ -2,11 +2,10 @@ name: Deploy to AWS via GitHub Actions
 
 on:
   # masterブランチへのプッシュ時にワークフローを実行
-  # 一時的に無効化: AWS認証情報の設定が必要
-  workflow_dispatch:  # 手動実行のみ
-  # push:
-  #   branches:
-  #     - main
+  workflow_dispatch:  # 手動実行も可能
+  push:
+    branches:
+      - main
 
 jobs:
   deploy:
