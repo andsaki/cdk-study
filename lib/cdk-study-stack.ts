@@ -172,24 +172,15 @@ export class CdkStudyStack extends cdk.Stack {
     });
 
     /**
-     * CloudFrontがS3バケットに安全にアクセスするためのOrigin Access Control (OAC)。
-     * OACはOAIの後継で、より強力なセキュリティ機能を提供します。
-     */
-    const oac = new cloudfront.S3OriginAccessControl(this, 'OAC', {
-      signing: cloudfront.Signing.SIGV4_ALWAYS,
-    });
-
-    /**
      * S3バケットのコンテンツを配信するCloudFrontディストリビューション。
      * 世界中のエッジロケーションにコンテンツをキャッシュし、高速なアクセスを提供します。
      * HTTPアクセスは自動的にHTTPSにリダイレクトされます。
+     * Origin Access Control (OAC) によりS3へのアクセスを安全に制御します。
      */
     const distribution = new cloudfront.Distribution(this, 'Distribution', {
       defaultRootObject: 'index.html',
       defaultBehavior: {
-        origin: origins.S3BucketOrigin.withOriginAccessControl(webSiteBucket, {
-          originAccessControl: oac,
-        }),
+        origin: origins.S3BucketOrigin.withOriginAccessControl(webSiteBucket),
         viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
       },
       comment: 'S3-backed React app with CloudFront',
