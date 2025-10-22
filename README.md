@@ -12,11 +12,12 @@
 **使用するAWSサービス:**
 
 - **Amazon S3:** フロントエンドの静的ファイル（HTML/CSS/JS）を格納します。
-- **Amazon CloudFront:** S3のコンテンツを世界中に高速かつ安全に配信するCDNです。
-- **Amazon API Gateway:** TODOアイテムを操作するためのREST APIエンドポイントを提供します。
-- **AWS Lambda:** APIリクエストを処理するビジネスロジックを実行します。
+- **Amazon CloudFront:** S3のコンテンツを世界中に高速かつ安全に配信するCDNです。Origin Access Control (OAC) でS3へのアクセスを制御します。
+- **Amazon API Gateway:** TODOアイテムを操作するためのREST APIエンドポイントを提供します。CORS設定によりクロスオリジンリクエストに対応しています。
+- **AWS Lambda:** APIリクエストを処理するビジネスロジックを実行します。ログは1週間保持され、X-Rayトレーシングが有効化されています。
 - **Amazon DynamoDB:** TODOアイテムを永続化するNoSQLデータベースです。(詳しい解説は [`docs/database_choice.md`](docs/database_choice.md) を参照)
-- **Amazon CloudWatch:** Lambda関数のエラーを監視し、アラームを発生させます。
+- **Amazon CloudWatch:** Lambda関数のエラーとスロットリングを監視し、アラームを発生させます。
+- **AWS X-Ray:** Lambda関数の実行をトレースし、パフォーマンス分析とボトルネックの特定を支援します。
 
 ### フロー1: フロントエンド（Webサイト）へのアクセス
 
@@ -24,17 +25,17 @@
 
 ```mermaid
 sequenceDiagram
-    participant ユーザー/ブラウザ
-    participant CloudFront
-    participant S3バケット
+    participant User as ユーザー/ブラウザ
+    participant CF as CloudFront
+    participant S3 as S3バケット
 
-    ユーザー/ブラウザ->>CloudFront: 1. Webサイトをリクエスト
+    User->>CF: 1. Webサイトをリクエスト
     alt CloudFrontにキャッシュがある場合
-        CloudFront-->>ユーザー/ブラウザ: 2. キャッシュから高速に応答
+        CF-->>User: 2. キャッシュから高速に応答
     else キャッシュがない場合
-        CloudFront->>S3バケット: 2a. OAIを使ってコンテンツを要求
-        S3バケット-->>CloudFront: 2b. index.htmlなどを返す
-        CloudFront-->>ユーザー/ブラウザ: 2c. コンテンツを返しつつキャッシュする
+        CF->>S3: 2a. OACを使ってコンテンツを要求
+        S3-->>CF: 2b. index.htmlなどを返す
+        CF-->>User: 2c. コンテンツを返しつつキャッシュする
     end
 ```
 
@@ -44,17 +45,23 @@ Webサイト上でユーザーが「TODOを作成」ボタンなどを押し、A
 
 ```mermaid
 sequenceDiagram
-    participant ユーザー/ブラウザ
-    participant API Gateway
-    participant Lambda (作成用)
-    participant DynamoDB
+    participant User as ユーザー/ブラウザ
+    participant APIGW as API Gateway
+    participant Lambda as Lambda(作成用)
+    participant DDB as DynamoDB
+    participant CW as CloudWatch
+    participant XRay as X-Ray
 
-    ユーザー/ブラウザ->>API Gateway: 1. TODO作成リクエスト (POST /todos)
-    API Gateway->>Lambda (作成用): 2. リクエストをLambdaに転送
-    Lambda (作成用)->>DynamoDB: 3. 新しいTODOデータを書き込み
-    DynamoDB-->>Lambda (作成用): 4. 書き込み成功を応答
-    Lambda (作成用)-->>API Gateway: 5. 処理成功を応答
-    API Gateway-->>ユーザー/ブラウザ: 6. 成功ステータス (200 OK) を返す
+    User->>APIGW: 1. TODO作成リクエスト (POST /todos)
+    APIGW->>Lambda: 2. リクエストをLambdaに転送
+    Lambda->>XRay: 3a. トレース情報を記録
+    Lambda->>DDB: 3b. 新しいTODOデータを書き込み
+    DDB-->>Lambda: 4. 書き込み成功を応答
+    Lambda->>CW: 5a. ログとメトリクスを記録
+    Lambda-->>APIGW: 5b. 処理成功を応答
+    APIGW-->>User: 6. 成功ステータス (200 OK) を返す
+
+    Note over CW: エラー/スロットル<br/>アラーム監視中
 ```
 
 ## プロジェクト構成

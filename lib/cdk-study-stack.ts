@@ -10,7 +10,7 @@ import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as s3deploy from 'aws-cdk-lib/aws-s3-deployment';
 import * as cloudfront from 'aws-cdk-lib/aws-cloudfront';
 import * as origins from 'aws-cdk-lib/aws-cloudfront-origins';
-import * as iam from 'aws-cdk-lib/aws-iam';
+import * as logs from 'aws-cdk-lib/aws-logs';
 
 /**
  * モダンなフルスタックWebアプリケーションの構成をCDKで定義するスタックです。
@@ -45,6 +45,8 @@ export class CdkStudyStack extends cdk.Stack {
       environment: {
         TABLE_NAME: table.tableName,
       },
+      logRetention: logs.RetentionDays.ONE_WEEK,
+      tracing: lambda.Tracing.ACTIVE,
     });
     table.grantWriteData(createTodoFunction);
 
@@ -56,6 +58,8 @@ export class CdkStudyStack extends cdk.Stack {
       environment: {
         TABLE_NAME: table.tableName,
       },
+      logRetention: logs.RetentionDays.ONE_WEEK,
+      tracing: lambda.Tracing.ACTIVE,
     });
     table.grantReadData(getTodosFunction);
 
@@ -67,6 +71,8 @@ export class CdkStudyStack extends cdk.Stack {
         environment: {
             TABLE_NAME: table.tableName,
         },
+        logRetention: logs.RetentionDays.ONE_WEEK,
+        tracing: lambda.Tracing.ACTIVE,
     });
     table.grantReadData(getTodoByIdFunction);
 
@@ -78,6 +84,8 @@ export class CdkStudyStack extends cdk.Stack {
       environment: {
         TABLE_NAME: table.tableName,
       },
+      logRetention: logs.RetentionDays.ONE_WEEK,
+      tracing: lambda.Tracing.ACTIVE,
     });
     table.grantWriteData(updateTodoFunction);
 
@@ -89,16 +97,25 @@ export class CdkStudyStack extends cdk.Stack {
         environment: {
             TABLE_NAME: table.tableName,
         },
+        logRetention: logs.RetentionDays.ONE_WEEK,
+        tracing: lambda.Tracing.ACTIVE,
     });
     table.grantWriteData(deleteTodoFunction);
 
     /**
      * Lambda関数群を外部に公開するためのREST APIの窓口。
      * /todos エンドポイントでTODOのCRUD操作を提供します。
+     * CORS設定により、フロントエンドからのクロスオリジンリクエストを許可します。
      */
     const api = new apigateway.LambdaRestApi(this, 'TodoApi', {
       handler: createTodoFunction, // Default handler
       proxy: false,
+      defaultCorsPreflightOptions: {
+        allowOrigins: apigateway.Cors.ALL_ORIGINS,
+        allowMethods: apigateway.Cors.ALL_METHODS,
+        allowHeaders: ['Content-Type', 'X-Amz-Date', 'Authorization', 'X-Api-Key', 'X-Amz-Security-Token'],
+        statusCode: 200,
+      },
     });
 
     const todos = api.root.addResource('todos');
@@ -111,16 +128,35 @@ export class CdkStudyStack extends cdk.Stack {
     todoById.addMethod('DELETE', new apigateway.LambdaIntegration(deleteTodoFunction));
 
     /**
-     * CreateTodoFunctionのエラー率を監視するCloudWatchアラーム。
+     * 全Lambda関数のエラー率を監視するCloudWatchアラーム群。
      * 5分間で5回以上のエラーが発生した場合にアラーム状態になります。
      */
-    new cloudwatch.Alarm(this, 'CreateTodoErrorAlarm', {
-        metric: createTodoFunction.metricErrors({ period: cdk.Duration.minutes(5) }),
+    const lambdaFunctions = [
+      { func: createTodoFunction, name: 'CreateTodo' },
+      { func: getTodosFunction, name: 'GetTodos' },
+      { func: getTodoByIdFunction, name: 'GetTodoById' },
+      { func: updateTodoFunction, name: 'UpdateTodo' },
+      { func: deleteTodoFunction, name: 'DeleteTodo' },
+    ];
+
+    lambdaFunctions.forEach(({ func, name }) => {
+      new cloudwatch.Alarm(this, `${name}ErrorAlarm`, {
+        metric: func.metricErrors({ period: cdk.Duration.minutes(5) }),
         threshold: 5,
         evaluationPeriods: 1,
-        alarmName: 'CreateTodoFunction-High-Error-Rate',
-        alarmDescription: 'createTodoFunctionのエラー率が高い場合にトリガーされます。',
+        alarmName: `${name}Function-High-Error-Rate`,
+        alarmDescription: `${name}Functionのエラー率が高い場合にトリガーされます。`,
         treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING,
+      });
+
+      new cloudwatch.Alarm(this, `${name}ThrottleAlarm`, {
+        metric: func.metricThrottles({ period: cdk.Duration.minutes(5) }),
+        threshold: 3,
+        evaluationPeriods: 1,
+        alarmName: `${name}Function-High-Throttle-Rate`,
+        alarmDescription: `${name}Functionのスロットリング率が高い場合にトリガーされます。`,
+        treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING,
+      });
     });
 
     // --- Frontend Hosting ---
@@ -136,16 +172,12 @@ export class CdkStudyStack extends cdk.Stack {
     });
 
     /**
-     * CloudFrontがS3バケットに安全にアクセスするための専用ID。
+     * CloudFrontがS3バケットに安全にアクセスするためのOrigin Access Control (OAC)。
+     * OACはOAIの後継で、より強力なセキュリティ機能を提供します。
      */
-    const originAccessIdentity = new cloudfront.OriginAccessIdentity(this, 'OriginAccessIdentity');
-
-    // OAIにS3バケットへの読み取り権限を付与
-    webSiteBucket.addToResourcePolicy(new iam.PolicyStatement({
-        actions: ['s3:GetObject'],
-        resources: [webSiteBucket.arnForObjects('*')],
-        principals: [originAccessIdentity.grantPrincipal],
-    }));
+    const oac = new cloudfront.S3OriginAccessControl(this, 'OAC', {
+      signing: cloudfront.Signing.SIGV4_ALWAYS,
+    });
 
     /**
      * S3バケットのコンテンツを配信するCloudFrontディストリビューション。
@@ -155,7 +187,9 @@ export class CdkStudyStack extends cdk.Stack {
     const distribution = new cloudfront.Distribution(this, 'Distribution', {
       defaultRootObject: 'index.html',
       defaultBehavior: {
-        origin: new origins.S3Origin(webSiteBucket, { originAccessIdentity }),
+        origin: origins.S3BucketOrigin.withOriginAccessControl(webSiteBucket, {
+          originAccessControl: oac,
+        }),
         viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
       },
       comment: 'S3-backed React app with CloudFront',
