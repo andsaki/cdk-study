@@ -3,6 +3,17 @@
 これはAWS CDK (TypeScript) を使用して構築された、シンプルなサーバーレスTODOアプリケーションです。
 学習目的で作成されました。
 
+## アーキテクチャ
+
+このプロジェクトには2つのアーキテクチャパターンが含まれています：
+
+### 1. サーバーレスアーキテクチャ（メインスタック）
+CloudFront + API Gateway + Lambda + DynamoDB を使用した、完全サーバーレスなアプリケーションです。
+
+### 2. ALB + ECS Fargateアーキテクチャ（学習用）
+Application Load Balancer + ECS Fargate を使用した、コンテナベースのアプリケーションです。
+詳細は [`docs/alb_ecs_architecture.md`](docs/alb_ecs_architecture.md) を参照してください。
+
 ## アーキテクチャと動作フロー
 
 このアプリケーションは、サーバーレスなバックエンドAPIと、CloudFront経由で高速配信されるフロントエンドで構成されるフルスタックアプリケーションです。

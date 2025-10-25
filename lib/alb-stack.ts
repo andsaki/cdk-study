@@ -293,7 +293,9 @@ export class AlbStack extends cdk.Stack {
     const service = new ecs.FargateService(this, 'Service', {
       cluster,
       taskDefinition,
-      desiredCount: 2,  // 2つのタスクを実行（高可用性）
+      desiredCount: 1,  // 初期は1タスク（Auto Scalingで増減）
+      minHealthyPercent: 50,  // デプロイ時、最低50%のタスクを維持
+      maxHealthyPercent: 200,  // デプロイ時、最大200%まで許可（ローリングアップデート）
       assignPublicIp: false,  // Private Subnetに配置
       securityGroups: [ecsSecurityGroup],
       vpcSubnets: {
@@ -333,6 +335,48 @@ export class AlbStack extends cdk.Stack {
         unhealthyThresholdCount: 3,
       },
       deregistrationDelay: cdk.Duration.seconds(30),  // ターゲット削除時の待機時間
+    });
+
+    // ========================================
+    // Auto Scaling
+    // ========================================
+
+    /**
+     * Auto Scaling - 負荷に応じてタスク数を自動調整します。
+     *
+     * Auto Scalingの利点:
+     * - 負荷が低い時はタスク数を減らしてコスト削減
+     * - 負荷が高い時は自動的にタスク数を増やしてパフォーマンス維持
+     * - 手動でタスク数を調整する必要がない
+     *
+     * minCapacity: 1 - 最低1タスクは常時稼働
+     * maxCapacity: 10 - 最大10タスクまで自動増加
+     *
+     * スケーリングポリシー:
+     * 1. CPU使用率ベース: CPU 70%超えたら増加、30%下回ったら減少
+     * 2. メモリ使用率ベース: メモリ 80%超えたら増加、40%下回ったら減少
+     *
+     * scaleInCooldown/scaleOutCooldown:
+     * - スケーリング後、次のスケーリングまでの待機時間
+     * - 頻繁なスケーリングを防ぐ（コスト最適化）
+     */
+    const scaling = service.autoScaleTaskCount({
+      minCapacity: 1,  // 最低1タスク
+      maxCapacity: 10,  // 最大10タスク
+    });
+
+    // CPU使用率が70%を超えたらスケールアウト（タスク増加）
+    scaling.scaleOnCpuUtilization('CpuScaling', {
+      targetUtilizationPercent: 70,
+      scaleInCooldown: cdk.Duration.seconds(60),   // スケールイン後60秒待機
+      scaleOutCooldown: cdk.Duration.seconds(60),  // スケールアウト後60秒待機
+    });
+
+    // メモリ使用率が80%を超えたらスケールアウト
+    scaling.scaleOnMemoryUtilization('MemoryScaling', {
+      targetUtilizationPercent: 80,
+      scaleInCooldown: cdk.Duration.seconds(60),
+      scaleOutCooldown: cdk.Duration.seconds(60),
     });
 
     // ========================================
