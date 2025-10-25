@@ -14,6 +14,9 @@ CloudFront + API Gateway + Lambda + DynamoDB を使用した、完全サーバ�
 Application Load Balancer + ECS Fargate を使用した、コンテナベースのアプリケーションです。
 詳細は [`docs/alb_ecs_architecture.md`](docs/alb_ecs_architecture.md) を参照してください。
 
+**関連ドキュメント:**
+- [SubnetとIPアドレスの関係](docs/subnet_and_ip_addressing.md) - VPC、Subnet、CIDR表記の基礎知識
+
 ## アーキテクチャと動作フロー
 
 このアプリケーションは、サーバーレスなバックエンドAPIと、CloudFront経由で高速配信されるフロントエンドで構成されるフルスタックアプリケーションです。
