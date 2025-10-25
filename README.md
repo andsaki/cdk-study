@@ -7,14 +7,17 @@
 
 このプロジェクトには2つのアーキテクチャパターンが含まれています：
 
-### 1. サーバーレスアーキテクチャ（メインスタック）
+### 1. サーバーレスアーキテクチャ（CdkStudyStack）
 CloudFront + API Gateway + Lambda + DynamoDB を使用した、完全サーバーレスなアプリケーションです。
 
-### 2. ALB + ECS Fargateアーキテクチャ（学習用）
+### 2. コンテナベースアーキテクチャ（AlbStack）
 Application Load Balancer + ECS Fargate を使用した、コンテナベースのアプリケーションです。
 詳細は [`docs/alb_ecs_architecture.md`](docs/alb_ecs_architecture.md) を参照してください。
 
+> **Note:** どちらもCDKで定義されています。スタック名とアーキテクチャの関係については、[スタック名とアーキテクチャの関係](docs/naming_and_architecture.md) を参照してください。
+
 **関連ドキュメント:**
+- [スタック名とアーキテクチャの関係](docs/naming_and_architecture.md) - なぜCdkStudyStackとAlbStackという名前なのか
 - [SubnetとIPアドレスの関係](docs/subnet_and_ip_addressing.md) - VPC、Subnet、CIDR表記の基礎知識
 
 ## アーキテクチャと動作フロー
