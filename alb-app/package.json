@@ -1,0 +1,15 @@
+{
+  "name": "alb-todo-app",
+  "version": "1.0.0",
+  "description": "Simple TODO API for ALB learning",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}
