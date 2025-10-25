@@ -11,13 +11,20 @@
 
 **使用するAWSサービス:**
 
-- **Amazon S3:** フロントエンドの静的ファイル（HTML/CSS/JS）を格納します。
-- **Amazon CloudFront:** S3のコンテンツを世界中に高速かつ安全に配信するCDNです。Origin Access Control (OAC) でS3へのアクセスを制御します。
-- **Amazon API Gateway:** TODOアイテムを操作するためのREST APIエンドポイントを提供します。CORS設定によりクロスオリジンリクエストに対応しています。
+### コアサービス
+- **Amazon S3:** フロントエンドの静的ファイル（HTML/CSS/JS）を格納します。SSE-S3暗号化、SSL強制、パブリックアクセス完全ブロックを実装。
+- **Amazon CloudFront:** S3のコンテンツを世界中に高速かつ安全に配信するCDNです。Origin Access Identity (OAI) でS3へのアクセスを制御し、セキュリティヘッダーを自動付与します。
+- **Amazon API Gateway:** TODOアイテムを操作するためのREST APIエンドポイントを提供します。APIキー認証、スロットリング、詳細ログ、X-Rayトレーシングを有効化。
 - **AWS Lambda:** APIリクエストを処理するビジネスロジックを実行します。ログは1週間保持され、X-Rayトレーシングが有効化されています。
-- **Amazon DynamoDB:** TODOアイテムを永続化するNoSQLデータベースです。(詳しい解説は [`docs/database_choice.md`](docs/database_choice.md) を参照)
+- **Amazon DynamoDB:** TODOアイテムを永続化するNoSQLデータベースです。AWS管理暗号化とポイントインタイムリカバリを有効化。(詳しい解説は [`docs/database_choice.md`](docs/database_choice.md) を参照)
+
+### セキュリティ・監視サービス
+- **AWS WAF:** API Gatewayを保護するWebアプリケーションファイアウォール。SQLインジェクション、XSS、DDoS攻撃を防御します。
+- **AWS Secrets Manager:** APIキーなどの機密情報を安全に管理します。自動暗号化、アクセス監査ログ、ローテーション機能を提供。
 - **Amazon CloudWatch:** Lambda関数のエラーとスロットリングを監視し、アラームを発生させます。
 - **AWS X-Ray:** Lambda関数の実行をトレースし、パフォーマンス分析とボトルネックの特定を支援します。
+
+詳細なセキュリティ機能については、[`docs/security.md`](docs/security.md) を参照してください。
 
 ### フロー1: フロントエンド（Webサイト）へのアクセス
 
@@ -42,24 +49,30 @@ sequenceDiagram
 ### フロー2: バックエンドAPIの呼び出し（TODO作成時）
 
 Webサイト上でユーザーが「TODOを作成」ボタンなどを押し、APIが呼び出される際の裏側の流れです。
+セキュリティの多層防御により、複数のチェックポイントを通過します。
 
 ```mermaid
 sequenceDiagram
     participant User as ユーザー/ブラウザ
+    participant WAF as AWS WAF
     participant APIGW as API Gateway
     participant Lambda as Lambda(作成用)
     participant DDB as DynamoDB
     participant CW as CloudWatch
     participant XRay as X-Ray
 
-    User->>APIGW: 1. TODO作成リクエスト (POST /todos)
-    APIGW->>Lambda: 2. リクエストをLambdaに転送
-    Lambda->>XRay: 3a. トレース情報を記録
-    Lambda->>DDB: 3b. 新しいTODOデータを書き込み
-    DDB-->>Lambda: 4. 書き込み成功を応答
-    Lambda->>CW: 5a. ログとメトリクスを記録
-    Lambda-->>APIGW: 5b. 処理成功を応答
-    APIGW-->>User: 6. 成功ステータス (200 OK) を返す
+    User->>WAF: 1. TODO作成リクエスト (POST /todos)<br/>+ x-api-key ヘッダー
+    Note over WAF: SQLインジェクション検査<br/>XSS検査<br/>レート制限チェック
+    WAF->>APIGW: 2. WAF検証通過
+    Note over APIGW: APIキー検証<br/>スロットリング適用
+    APIGW->>Lambda: 3. 認証済みリクエストを転送
+    Lambda->>XRay: 4a. トレース情報を記録
+    Note over Lambda: IAM権限で<br/>DynamoDB書き込み
+    Lambda->>DDB: 4b. 新しいTODOデータを書き込み<br/>(暗号化されて保存)
+    DDB-->>Lambda: 5. 書き込み成功を応答
+    Lambda->>CW: 6a. ログとメトリクスを記録
+    Lambda-->>APIGW: 6b. 処理成功を応答
+    APIGW-->>User: 7. 成功ステータス (200 OK) を返す
 
     Note over CW: エラー/スロットル<br/>アラーム監視中
 ```
@@ -89,16 +102,46 @@ sequenceDiagram
 
 ## デプロイ後の確認
 
-`npx cdk deploy` が成功すると、`Outputs` として以下のような2つのURLが出力されます。
+`npx cdk deploy` が成功すると、`Outputs` として以下の情報が出力されます。
+
+### 出力される情報
 
 *   `CdkStudyStack.CloudFrontURL`: フロントエンドのWebサイトにアクセスするためのURLです。ブラウザで開いて確認します。
-*   `CdkStudyStack.TodoApiEndpoint...`: バックエンドAPIのエンドポイントURLです。
+*   `CdkStudyStack.ApiEndpoint`: バックエンドAPIのエンドポイントURLです。
+*   `CdkStudyStack.ApiKeyId`: API Keyのリソース ID です（後述の方法で実際のキー値を取得します）。
+*   `CdkStudyStack.ApiKeySecretArn`: Secrets ManagerのARNです。
 
 **出力例:**
 ```
 Outputs:
 CdkStudyStack.CloudFrontURL = https://xxxxxxxxxxxxxx.cloudfront.net
-CdkStudyStack.TodoApiEndpointC1E16B6C = https://xxxxxxxxxx.execute-api.ap-northeast-1.amazonaws.com/prod/
+CdkStudyStack.ApiEndpoint = https://xxxxxxxxxx.execute-api.ap-northeast-1.amazonaws.com/prod/
+CdkStudyStack.ApiKeyId = abc123xyz
+CdkStudyStack.ApiKeySecretArn = arn:aws:secretsmanager:ap-northeast-1:123456789012:secret:ApiKeySecret-xxxxx
+```
+
+### API Keyの取得方法
+
+フロントエンドでAPIを呼び出すには、API Keyが必要です。以下のいずれかの方法で取得してください。
+
+**方法1: AWS CLI**
+```bash
+aws apigateway get-api-key \
+  --api-key <ApiKeyId> \
+  --include-value \
+  --query 'value' \
+  --output text
+```
+
+**方法2: AWSマネジメントコンソール**
+1. API Gatewayコンソールを開く
+2. 左メニューから「APIキー」を選択
+3. `TodoApiKey` をクリック
+4. 「表示」ボタンをクリックしてキー値を確認
+
+取得したAPI Keyは、HTTPリクエストのヘッダーに以下のように含めます：
+```
+x-api-key: <取得したAPIキー>
 ```
 
 ## 本番環境へのデプロイ
