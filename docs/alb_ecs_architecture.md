@@ -351,28 +351,11 @@ CloudFront（CDN、静的ファイル）
 - Nginxの管理コストを削減
 - ALBの機能だけで十分
 
-#### Nuxt + Nitroサーバーの構成パターン
+#### このプロジェクトの構成: ALB → Node.js Express
 
-NuxtアプリケーションをAWSにデプロイする場合、いくつかの構成パターンがあります。
+このプロジェクトは最もシンプルな構成を採用しています。
 
-**主要パターン:**
-
-| パターン | 構成 | 適している場合 |
-|---------|------|--------------|
-| **1. シンプル**<br/>（このプロジェクト） | ALB → Nuxt (Nitro) | 個人開発、学習用、小規模 |
-| **2. 本番環境（中規模）** | CloudFront → ALB → Nuxt | グローバル配信、CDN必要 |
-| **3. 本番環境（大規模）** | CloudFront → ALB → Nginx → Nuxt | 細かい制御、キャッシュ最適化 |
-| **4. 完全サーバーレス** | Vercel / Netlify | 最速デプロイ、運用負荷ゼロ |
-
-このプロジェクトは**パターン1（シンプル構成）**を採用しています。
-
----
-
-### パターン1: ALB → Nuxt (Nitro) 詳細
-
-このプロジェクトで採用している、最もシンプルな構成です。
-
-#### アーキテクチャ図
+**アーキテクチャ図:**
 
 ```
 インターネット
@@ -381,192 +364,86 @@ NuxtアプリケーションをAWSにデプロイする場合、いくつかの�
     ↓
   ECS Fargate
     ↓
-  Nuxt App (Nitro: Port 3000)
-    ├── SSR（ページレンダリング）
-    ├── /api/*（APIルート）
-    └── /_nuxt/*（静的アセット）
+  Node.js App (Express: Port 3000)
+    ├── APIエンドポイント
+    └── 静的ファイル配信
 ```
 
-#### Nitroサーバーとは
-
-Nuxt 3から標準搭載されている、高性能なサーバーエンジンです。
-
-**主な特徴:**
-
-| 機能 | 説明 | 例 |
-|------|------|-----|
-| **SSR** | サーバーでHTMLを生成（SEO対応） | `pages/index.vue` → HTML |
-| **APIルート** | ファイルベースで自動的にAPIエンドポイント作成 | `server/api/users.ts` → `/api/users` |
-| **静的配信** | ビルド済みJS/CSS/画像を配信 | `/_nuxt/app.js` |
-| **ルーティング** | ファイルベースの自動ルーティング | `/about` → `pages/about.vue` |
-| **ミドルウェア** | すべてのリクエストで実行される処理 | `server/middleware/auth.ts` |
-
-**Nitro vs 他のサーバー:**
-
-| 項目 | Nitro (Nuxt 3) | Express/Fastify | Nginx |
-|------|----------------|-----------------|-------|
-| 用途 | Nuxt専用サーバー | 汎用Webサーバー | リバースプロキシ |
-| SSR | 標準搭載 | 自分で実装 | 不可 |
-| APIルート | ファイルベース自動 | 手動ルーティング | 不可 |
-| デプロイ | 自動最適化 | 手動設定 | 手動設定 |
-
-#### リクエストフロー
+**リクエストフロー:**
 
 ```mermaid
 sequenceDiagram
     participant User as ユーザー
     participant ALB as ALB
-    participant Nitro as Nuxt (Nitro)
+    participant Express as Node.js (Express)
     participant DDB as DynamoDB
 
-    Note over User,DDB: パターン1: ページアクセス（SSR）
+    Note over User,DDB: パターン1: APIリクエスト
 
-    User->>ALB: 1. GET /<br/>（ページリクエスト）
-    ALB->>Nitro: 2. リクエスト転送
-    Note over Nitro: SSRエンジン起動<br/>Vueコンポーネントをレンダリング
-    Nitro->>DDB: 3. データ取得（必要なら）
-    DDB-->>Nitro: 4. データ
-    Note over Nitro: HTMLを生成
-    Nitro-->>ALB: 5. レンダリング済みHTML
-    ALB-->>User: 6. HTML返却<br/>（SEO対応済み）
-
-    Note over User,DDB: パターン2: APIリクエスト
-
-    User->>ALB: 1. GET /api/users
-    ALB->>Nitro: 2. リクエスト転送
-    Note over Nitro: /server/api/users.ts実行
-    Nitro->>DDB: 3. データ取得
-    DDB-->>Nitro: 4. データ
-    Nitro-->>ALB: 5. JSON返却
+    User->>ALB: 1. GET /api/todos
+    ALB->>Express: 2. リクエスト転送
+    Note over Express: Expressルーター処理<br/>app.get('/api/todos')
+    Express->>DDB: 3. データ取得
+    DDB-->>Express: 4. データ
+    Express-->>ALB: 5. JSON返却
     ALB-->>User: 6. JSON
+
+    Note over User,DDB: パターン2: ヘルスチェック
+
+    ALB->>Express: 1. GET /health
+    Note over Express: app.get('/health')<br/>処理
+    Express-->>ALB: 2. {"status":"ok"}
+    Note over ALB: ヘルスチェック成功
 
     Note over User,DDB: パターン3: 静的ファイル
 
-    User->>ALB: 1. GET /_nuxt/app.js
-    ALB->>Nitro: 2. リクエスト転送
-    Note over Nitro: ビルド済みファイル配信<br/>（キャッシュヘッダー付き）
-    Nitro-->>ALB: 3. JSファイル
+    User->>ALB: 1. GET /static/app.js
+    ALB->>Express: 2. リクエスト転送
+    Note over Express: express.static()で配信
+    Express-->>ALB: 3. JSファイル
     ALB-->>User: 4. JSファイル
 ```
 
-#### ディレクトリ構造例
+**Express コード例:**
 
-```
-nuxt-app/
-├── pages/
-│   ├── index.vue          # / → SSR
-│   └── about.vue          # /about → SSR
-├── server/
-│   ├── api/
-│   │   └── users.ts       # /api/users → API
-│   └── middleware/
-│       └── auth.ts        # 全リクエストで実行
-├── public/
-│   └── favicon.ico        # /favicon.ico
-└── nuxt.config.ts
-```
+```javascript
+// app.js
+const express = require('express');
+const app = express();
 
-**APIルート例:**
+// 静的ファイル配信
+app.use('/static', express.static('public'));
 
-```typescript
-// server/api/users.ts
-export default defineEventHandler(async (event) => {
-  // DynamoDBからデータ取得
-  const users = await fetchUsersFromDB()
-  return { users }
-})
-// → /api/users で自動的にアクセス可能
+// ヘルスチェック
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok' });
+});
+
+// API
+app.get('/api/todos', async (req, res) => {
+  const todos = await fetchTodosFromDB();
+  res.json({ todos });
+});
+
+app.listen(3000);
 ```
 
-**ミドルウェア例:**
-
-```typescript
-// server/middleware/auth.ts
-export default defineEventHandler((event) => {
-  // すべてのリクエストで実行される
-  console.log('Request:', event.node.req.url)
-})
-```
-
-#### nuxt.config.ts 設定
-
-```typescript
-export default defineNuxtConfig({
-  // Nitroサーバー設定
-  nitro: {
-    preset: 'node-server',  // Node.jsサーバーとして起動
-    port: 3000,             // ALBからこのポートにアクセス
-  },
-
-  // SSR有効化（デフォルト）
-  ssr: true,
-
-  // ルーティング設定
-  routeRules: {
-    // 静的ページはビルド時生成
-    '/': { prerender: true },
-
-    // APIはキャッシュしない
-    '/api/**': { cache: false },
-
-    // 静的ファイルは1年キャッシュ
-    '/_nuxt/**': { headers: { 'cache-control': 'max-age=31536000' } },
-  },
-})
-```
-
-#### Dockerfile
-
-```dockerfile
-FROM node:20-alpine
-
-WORKDIR /app
-
-# 依存関係インストール
-COPY package*.json ./
-RUN npm ci
-
-# ソースコピー
-COPY . .
-
-# Nuxtビルド（Nitroサーバー生成）
-RUN npm run build
-
-# ポート公開
-EXPOSE 3000
-
-# Nitroサーバー起動
-CMD ["node", ".output/server/index.mjs"]
-```
-
-#### メリット・デメリット
-
-**メリット:**
-- **シンプル**: ALBとNuxtだけ、Nginx不要
-- **オールインワン**: SSR + API + 静的ファイル全部Nitroが処理
-- **デプロイ簡単**: `npm run build` → Docker化 → デプロイ
+**このプロジェクトの選択理由:**
+- **シンプル**: ALBとNode.jsだけ、Nginx不要
 - **学習に最適**: 構成がシンプルで理解しやすい
 - **コスト安**: 追加のサーバー不要
+- **十分な機能**: 小規模アプリには十分
 
-**デメリット:**
-- **細かい制御できない**: Nginxのような柔軟性はない
-- **キャッシュ弱い**: Nitro内蔵キャッシュは限定的
-- **静的配信**: 大量の静的ファイルはCloudFront推奨
-- **グローバル配信**: CDNなしでは遠い地域で遅い
+**参考: 他のWebフレームワークを使う場合**
 
-#### いつ他のパターンを検討するか？
+もしNuxtなどのフレームワークを使う場合も、同様の構成パターンがあります：
 
-| 状況 | 次のステップ | 理由 |
-|------|------------|------|
-| 静的ファイル多い（画像大量等） | → CloudFront追加 | CDNでキャッシュ、Nitroの負荷軽減 |
-| 細かいキャッシュ制御が必要 | → Nginx追加 | より柔軟なキャッシュルール |
-| グローバル展開 | → CloudFront追加 | 世界中で高速表示 |
-| APIを完全分離したい | → API Gateway + Lambda | マイクロサービス化 |
-| トラフィック急増 | → CloudFront + Auto Scaling | CDNで負荷分散 |
-
-**結論:**
-
-このプロジェクトは**パターン1（ALB → Nuxt）**で十分です。他のパターンは必要になってから検討しましょう。
+| パターン | 構成 | 適している場合 |
+|---------|------|--------------|
+| **1. シンプル** | ALB → App (Node.js/Nuxt/Next.js) | 個人開発、学習用、小規模 |
+| **2. 本番環境（中規模）** | CloudFront → ALB → App | グローバル配信、CDN必要 |
+| **3. 本番環境（大規模）** | CloudFront → ALB → Nginx → App | 細かい制御、キャッシュ最適化 |
+| **4. 完全サーバーレス** | Vercel / Netlify | 最速デプロイ、運用負荷ゼロ |
 
 ### 3. ECS Fargate
 
